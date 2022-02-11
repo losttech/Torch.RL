@@ -1,10 +1,10 @@
 ﻿namespace LostTech.Torch.RL {
     using System;
-    using TorchSharp;
-    using TorchSharp.NN;
-    using TorchSharp.Tensor;
 
-    public class Actor : CustomModule {
+    using static TorchSharp.torch;
+    using static TorchSharp.torch.nn;
+
+    public class Actor : Module {
         public Module Backbone { get; }
         public Module Action { get; }
         public Module ActionDistribution { get; }
@@ -20,9 +20,7 @@
             this.Action = action ?? throw new ArgumentNullException(nameof(action));
             this.ActionDistribution = actionDistribution ?? throw new ArgumentNullException(nameof(actionDistribution));
 
-            this.RegisterModule(nameof(this.Backbone), this.Backbone);
-            this.RegisterModule(nameof(this.Action), this.Action);
-            this.RegisterModule(nameof(this.ActionDistribution), this.ActionDistribution);
+            this.RegisterComponents();
 
             this.ActionMin = actionMin;
             this.ActionMax = actionMax;
@@ -35,8 +33,8 @@
         const float LogStdMax = 2;
         const float LogStdMin = -20;
 
-        public sealed override TorchTensor forward(TorchTensor observation) => this.forward(observation, deterministic: false);
-        public virtual TorchTensor forward(TorchTensor observation, out TorchTensor logProb) {
+        public sealed override Tensor forward(Tensor observation) => this.forward(observation, deterministic: false);
+        public virtual Tensor forward(Tensor observation, out Tensor logProb) {
             this.Mu_LogStd(observation, out var mu, out var logStd);
 
             var piDistribution = new NormalDistribution(mu, logStd.exp());
@@ -48,7 +46,7 @@
 
             return this.MakeAction(piAction);
         }
-        public virtual TorchTensor forward(TorchTensor observation, bool deterministic) {
+        public virtual Tensor forward(Tensor observation, bool deterministic) {
             this.Mu_LogStd(observation, out var mu, out var logStd);
 
             var piAction = deterministic ? mu : new NormalDistribution(mu, logStd.exp()).Sample(device: this.Device);
@@ -56,14 +54,14 @@
             return this.MakeAction(piAction);
         }
 
-        void Mu_LogStd(TorchTensor observation, out TorchTensor mu, out TorchTensor logStd) {
+        void Mu_LogStd(Tensor observation, out Tensor mu, out Tensor logStd) {
             var backboneOut = this.Backbone.forward(observation);
             mu = this.Action.forward(backboneOut);
             logStd = this.ActionDistribution.forward(backboneOut);
             logStd = logStd.clamp(min: LogStdMin, max: LogStdMax);
         }
 
-        TorchTensor MakeAction(TorchTensor piAction) {
+        Tensor MakeAction(Tensor piAction) {
             var action = piAction.tanh();
 
             if (float.IsNaN(this.ActionMin)) throw new ArgumentException(nameof(this.ActionMin));

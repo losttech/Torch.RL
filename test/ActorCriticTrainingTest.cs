@@ -5,15 +5,20 @@
     using System.Linq;
     using LostTech.AI.RL;
     using LostTech.Torch.RL.SoftActorCritic;
-    using TorchSharp.NN;
-    using TorchSharp.Tensor;
+
+    using TorchSharp;
+
     using Xunit;
-    using static TorchSharp.NN.Modules;
+
+    using static TorchSharp.torch;
+    using static TorchSharp.torch.nn;
+    using static TorchSharp.torch.optim;
+
     public class ActorCriticTrainingTest {
         [Fact]
         public void TrainsOnRepeatObservation() {
             var env = new RepeatObservationEnvironment(Environment.ProcessorCount);
-            TorchSharp.Torch.SetSeed(112);
+            random.manual_seed(112);
 
             var replayBuffer = new ReplayBuffer(observationDimensions: 1, actionDimensions: 1,
                                                 size: 64 * 1024, batchSize: env.AgentCount);
@@ -23,6 +28,7 @@
                 static Module activation() => ReLU(inPlace: false);
 
                 const int backInner = 16;
+
 
                 var backbone = Sequential(("bb_h1", Linear(env.ObservationSize, backInner)),
                                           ("bb_h1_act", activation()),
@@ -55,8 +61,8 @@
                 return ac;
             }
             var trainer = new SoftActorCriticTrainer(ActorCriticFactory,
-                qOptimizerFactory: @params => Optimizer.Adam(@params),
-                piOptimizerFactory: @params => Optimizer.Adam(@params));
+                qOptimizerFactory: @params => Adam(@params),
+                piOptimizerFactory: @params => Adam(@params));
 
             const int totalSteps = 8*1024;
             const int randomSteps = 128;
@@ -72,6 +78,7 @@
             float avgReward = 0;
 
             for (int stepN = 0; stepN < totalSteps; stepN++) {
+                using var _ = torch.NewDisposeScope();
                 float[] action = stepN > randomSteps
                     ? trainer.ActorCritic.Act(observation, deterministic: stepN % 28 == 0).ToArray()
                     : env.SampleAction();
@@ -87,11 +94,11 @@
                 avgReward += reward.Average();
 
                 var recording = new ReplayBufferEntry(
-                    observation: Float32Tensor.from(observation),
-                    newObservation: Float32Tensor.from(newObservation),
-                    action: Float32Tensor.from(action),
-                    reward: Float32Tensor.from(reward),
-                    done: Float32Tensor.zeros(env.AgentCount)
+                    observation: tensor(observation),
+                    newObservation: torch.tensor(newObservation),
+                    action: torch.tensor(action),
+                    reward: torch.tensor(reward),
+                    done: torch.zeros(env.AgentCount)
                 );
                 replayBuffer.Store(recording);
                 recording.Dispose();

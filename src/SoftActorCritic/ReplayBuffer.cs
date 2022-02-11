@@ -1,8 +1,8 @@
 ﻿namespace LostTech.Torch.RL {
     using System;
     using TorchSharp;
-    using TorchSharp.Tensor;
     using static System.Linq.Enumerable;
+    using static TorchSharp.torch;
 
     /// <summary>
     /// Circular buffer, that records agent observations.
@@ -25,11 +25,11 @@
         /// agents)</param>
         public ReplayBuffer(int observationDimensions, int actionDimensions, int size, int batchSize) {
             this.buffer = new ReplayBufferEntry(
-                observation: Float32Tensor.zeros(new long[] { size, observationDimensions }),
-                newObservation: Float32Tensor.zeros(new long[] { size, observationDimensions }),
-                action: Float32Tensor.zeros(new long[] { size, actionDimensions }),
-                reward: Float32Tensor.zeros(size),
-                done: Float32Tensor.zeros(size)
+                observation: torch.zeros(new long[] { size, observationDimensions }),
+                newObservation: torch.zeros(new long[] { size, observationDimensions }),
+                action: torch.zeros(new long[] { size, actionDimensions }),
+                reward: torch.zeros(size),
+                done: torch.zeros(size)
             );
             this.Capacity = size;
             this.batchSize = batchSize;
@@ -41,14 +41,15 @@
         /// </summary>
         /// <param name="batchSize">Number of observations to pick</param>
         public ReplayBufferEntry SampleBatch(int batchSize) {
-            using var noGrad = new AutoGradMode(false);
-            var indices = Int64Tensor.randint(max: this.Size, new long[] { batchSize });
+            using var noGrad = torch.no_grad();
+            var indices = torch.randint(high: this.Size, new long[] { batchSize }, dtype: ScalarType.Int64);
+            var tensorIndices = TensorIndex.Tensor(indices);
             return new ReplayBufferEntry(
-                observation: this.buffer.Observation[TorchTensorIndex.Tensor(indices)],
-                newObservation: this.buffer.NewObservation[TorchTensorIndex.Tensor(indices)],
-                action: this.buffer.Action[TorchTensorIndex.Tensor(indices)],
-                reward: this.buffer.Reward[TorchTensorIndex.Tensor(indices)],
-                done: this.buffer.Done[TorchTensorIndex.Tensor(indices)]
+                observation: this.buffer.Observation[tensorIndices],
+                newObservation: this.buffer.NewObservation[tensorIndices],
+                action: this.buffer.Action[tensorIndices],
+                reward: this.buffer.Reward[tensorIndices],
+                done: this.buffer.Done[tensorIndices]
             );
         }
         /// <summary>
@@ -60,10 +61,10 @@
                     message: "The first dimension of input must match batchSize",
                     paramName: nameof(observation));
 
-            using var noGrad = new AutoGradMode(false);
+            using var noGrad = torch.no_grad();
 
             if (this.Size == this.Capacity)
-                this.ptr = Int32Tensor.randint(max: this.Capacity / this.batchSize, new long[] { 1 }).ToScalar().ToInt32() * this.batchSize;
+                this.ptr = torch.randint(high: this.Capacity / this.batchSize, new long[] { 1 }).ToScalar().ToInt32() * this.batchSize;
 
             foreach (int batchElement in Range(0, this.batchSize)) {
                 this.buffer.Observation[this.ptr + batchElement] = observation.Observation[batchElement];

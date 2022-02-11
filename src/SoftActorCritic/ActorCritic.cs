@@ -1,14 +1,17 @@
 ﻿namespace LostTech.Torch.RL.SoftActorCritic {
     using System;
     using System.Linq;
+
     using TorchSharp;
-    using TorchSharp.NN;
-    using TorchSharp.Tensor;
+    using TorchSharp.Utils;
+
+    using static TorchSharp.torch;
+    using static TorchSharp.torch.nn;
 
     /// <summary>
     /// Encapsulates neural networks, that represent Soft Actor-Critic-based agent
     /// </summary>
-    public class ActorCritic : CustomModule {
+    public class ActorCritic : Module {
         /// <summary>
         /// Networks that decide what agent is going to do in the environment
         /// </summary>
@@ -34,24 +37,22 @@
                 this.Q2 = this.Q2.to(device);
             }
 
-            this.RegisterModule(nameof(this.Actor), this.Actor);
-            this.RegisterModule(nameof(this.Q1), this.Q1);
-            this.RegisterModule(nameof(this.Q2), this.Q2);
+            this.RegisterComponents();
         }
 
-        public override TorchTensor forward(TorchTensor t) => throw new NotSupportedException();
+        public override Tensor forward(Tensor t) => throw new NotSupportedException();
 
-        public Span<float> Act(float[] observation, bool deterministic = false) {
+        public TensorAccessor<float> Act(float[] observation, bool deterministic = false) {
             if (observation is null) throw new ArgumentNullException(nameof(observation));
 
-            using var noGrad = new AutoGradMode(false);
-            var observationTensor = Float32Tensor.from(observation,
-                                                       dimensions: new[] { observation.Length, 1L });
+            using var noGrad = torch.no_grad();
+            var observationTensor = torch.tensor(observation,
+                                                 dimensions: new[] { observation.Length, 1L });
             if (this.Actor.Device is { } device)
                 observationTensor = observationTensor.to(device);
             var action = this.Actor.forward(observationTensor,
                                             deterministic: deterministic);
-            return action.cpu().Data<float>();
+            return action.cpu().data<float>();
         }
     }
 }

@@ -1,10 +1,10 @@
 ﻿namespace LostTech.Torch.RL {
     using System;
-    using TorchSharp;
-    using TorchSharp.Tensor;
+
+    using static TorchSharp.torch;
 
     public class ReplayBufferEntry : IDisposable {
-        public ReplayBufferEntry(TorchTensor observation, TorchTensor newObservation, TorchTensor action, TorchTensor reward, TorchTensor done) {
+        public ReplayBufferEntry(Tensor observation, Tensor newObservation, Tensor action, Tensor reward, Tensor done) {
             this.Observation = observation ?? throw new ArgumentNullException(nameof(observation));
             this.NewObservation = newObservation ?? throw new ArgumentNullException(nameof(newObservation));
             this.Action = action ?? throw new ArgumentNullException(nameof(action));
@@ -12,11 +12,11 @@
             this.Done = done ?? throw new ArgumentNullException(nameof(done));
         }
 
-        public TorchTensor Observation { get; init; }
-        public TorchTensor NewObservation { get; init; }
-        public TorchTensor Action { get; init; }
-        public TorchTensor Reward { get; init; }
-        public TorchTensor Done { get; init; }
+        public Tensor Observation { get; init; }
+        public Tensor NewObservation { get; init; }
+        public Tensor Action { get; init; }
+        public Tensor Reward { get; init; }
+        public Tensor Done { get; init; }
 
         public ReplayBufferEntry To(Device device)
             => new(
