@@ -7,6 +7,7 @@
 
     <!-- Package stuff -->
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
     <VersionPrefix>0.0.1</VersionPrefix>
 
     <!-- The following is recommended for public projects -->
@@ -20,6 +21,7 @@
 
   <ItemGroup>
     <None Include="..\LICENSE" Pack="true" PackagePath="" />
+	<None Include="..\README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
