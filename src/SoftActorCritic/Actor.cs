@@ -1,81 +1,81 @@
-﻿namespace LostTech.Torch.RL {
-    using System;
+﻿namespace LostTech.Torch.RL.SoftActorCritic;
 
-    using static TorchSharp.torch;
-    using static TorchSharp.torch.nn;
+using System;
 
-    public class Actor : Module {
-        public Module Backbone { get; }
-        public Module Action { get; }
-        public Module ActionDistribution { get; }
-        public float ActionMin { get; }
-        public float ActionMax { get; }
-        public Device? Device { get; }
+using static TorchSharp.torch;
+using static TorchSharp.torch.nn;
 
-        public Actor(Module backbone, Module action, Module actionDistribution,
-                     float actionMin = -1, float actionMax = +1,
-                     Device? device = null,
-                     string name = "actor") : base(name) {
-            this.Backbone = backbone ?? throw new ArgumentNullException(nameof(backbone));
-            this.Action = action ?? throw new ArgumentNullException(nameof(action));
-            this.ActionDistribution = actionDistribution ?? throw new ArgumentNullException(nameof(actionDistribution));
+public class Actor : Module {
+    public Module Backbone { get; }
+    public Module Action { get; }
+    public Module ActionDistribution { get; }
+    public float ActionMin { get; }
+    public float ActionMax { get; }
+    public Device? Device { get; }
 
-            this.RegisterComponents();
+    public Actor(Module backbone, Module action, Module actionDistribution,
+                 float actionMin = -1, float actionMax = +1,
+                 Device? device = null,
+                 string name = "actor") : base(name) {
+        this.Backbone = backbone ?? throw new ArgumentNullException(nameof(backbone));
+        this.Action = action ?? throw new ArgumentNullException(nameof(action));
+        this.ActionDistribution = actionDistribution ?? throw new ArgumentNullException(nameof(actionDistribution));
 
-            this.ActionMin = actionMin;
-            this.ActionMax = actionMax;
+        this.RegisterComponents();
 
-            if (device is not null)
-                this.to(device);
-            this.Device = device;
-        }
+        this.ActionMin = actionMin;
+        this.ActionMax = actionMax;
 
-        const float LogStdMax = 2;
-        const float LogStdMin = -20;
+        if (device is not null)
+            this.to(device);
+        this.Device = device;
+    }
 
-        public sealed override Tensor forward(Tensor observation) => this.forward(observation, deterministic: false);
-        public virtual Tensor forward(Tensor observation, out Tensor logProb) {
-            this.Mu_LogStd(observation, out var mu, out var logStd);
+    const float LogStdMax = 2;
+    const float LogStdMin = -20;
 
-            var piDistribution = new NormalDistribution(mu, logStd.exp());
+    public sealed override Tensor forward(Tensor observation) => this.forward(observation, deterministic: false);
+    public virtual Tensor forward(Tensor observation, out Tensor logProb) {
+        this.Mu_LogStd(observation, out var mu, out var logStd);
 
-            var piAction = piDistribution.Sample(device: this.Device);
-            logProb = piDistribution.LogProb(piAction).sum(dimensions: new long[] { -1 });
-            logProb -= (2 * (-piAction + MathF.Log(2) - (-2 * piAction).softplus()))
-                .sum(dimensions: new long[] { 1 });
+        var piDistribution = new NormalDistribution(mu, logStd.exp());
 
-            return this.MakeAction(piAction);
-        }
-        public virtual Tensor forward(Tensor observation, bool deterministic) {
-            this.Mu_LogStd(observation, out var mu, out var logStd);
+        var piAction = piDistribution.Sample(device: this.Device);
+        logProb = piDistribution.LogProb(piAction).sum(dimensions: new long[] { -1 });
+        logProb -= (2 * (-piAction + MathF.Log(2) - (-2 * piAction).softplus()))
+            .sum(dimensions: new long[] { 1 });
 
-            var piAction = deterministic ? mu : new NormalDistribution(mu, logStd.exp()).Sample(device: this.Device);
+        return this.MakeAction(piAction);
+    }
+    public virtual Tensor forward(Tensor observation, bool deterministic) {
+        this.Mu_LogStd(observation, out var mu, out var logStd);
 
-            return this.MakeAction(piAction);
-        }
+        var piAction = deterministic ? mu : new NormalDistribution(mu, logStd.exp()).Sample(device: this.Device);
 
-        void Mu_LogStd(Tensor observation, out Tensor mu, out Tensor logStd) {
-            var backboneOut = this.Backbone.forward(observation);
-            mu = this.Action.forward(backboneOut);
-            logStd = this.ActionDistribution.forward(backboneOut);
-            logStd = logStd.clamp(min: LogStdMin, max: LogStdMax);
-        }
+        return this.MakeAction(piAction);
+    }
 
-        Tensor MakeAction(Tensor piAction) {
-            var action = piAction.tanh();
+    void Mu_LogStd(Tensor observation, out Tensor mu, out Tensor logStd) {
+        var backboneOut = this.Backbone.forward(observation);
+        mu = this.Action.forward(backboneOut);
+        logStd = this.ActionDistribution.forward(backboneOut);
+        logStd = logStd.clamp(min: LogStdMin, max: LogStdMax);
+    }
 
-            if (float.IsNaN(this.ActionMin)) throw new ArgumentException(nameof(this.ActionMin));
-            if (float.IsNaN(this.ActionMax)) throw new ArgumentException(nameof(this.ActionMax));
-            if (float.IsInfinity(this.ActionMin) || float.IsInfinity(this.ActionMax))
-                throw new NotImplementedException("Unlimited action");
-            if (this.ActionMax <= this.ActionMin)
-                throw new ArgumentException($"{nameof(this.ActionMax)} must be greater than {nameof(this.ActionMin)}");
+    Tensor MakeAction(Tensor piAction) {
+        var action = piAction.tanh();
 
-            action = (action + 1) // 0..2
-                     * ((this.ActionMax - this.ActionMin) / 2) // 0 .. max-min
-                     + this.ActionMin; // min..max
+        if (float.IsNaN(this.ActionMin)) throw new ArgumentException(nameof(this.ActionMin));
+        if (float.IsNaN(this.ActionMax)) throw new ArgumentException(nameof(this.ActionMax));
+        if (float.IsInfinity(this.ActionMin) || float.IsInfinity(this.ActionMax))
+            throw new NotImplementedException("Unlimited action");
+        if (this.ActionMax <= this.ActionMin)
+            throw new ArgumentException($"{nameof(this.ActionMax)} must be greater than {nameof(this.ActionMin)}");
 
-            return action;
-        }
+        action = (action + 1) // 0..2
+                 * ((this.ActionMax - this.ActionMin) / 2) // 0 .. max-min
+                 + this.ActionMin; // min..max
+
+        return action;
     }
 }
