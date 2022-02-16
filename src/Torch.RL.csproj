@@ -27,6 +27,7 @@
   <ItemGroup>
     <!-- The following is recommended for public projects -->
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+    <PackageReference Include="RL" Version="0.0.1" />
     <PackageReference Include="TorchSharp" Version="0.96.0" />
   </ItemGroup>
 

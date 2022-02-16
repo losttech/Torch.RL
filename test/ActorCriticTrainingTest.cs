@@ -4,8 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
-using LostTech.AI.RL;
+using global::RL.Envs;
 using LostTech.Torch.RL.SoftActorCritic;
 
 using TorchSharp;
@@ -19,11 +18,11 @@ using static TorchSharp.torch.optim;
 public class ActorCriticTrainingTest {
     [Fact]
     public void TrainsOnRepeatObservation() {
-        var env = new RepeatObservationEnvironment(Environment.ProcessorCount);
-        random.manual_seed(112);
+        var env = new RepeatObservation();
+        torch.random.manual_seed(112);
 
         var replayBuffer = new ReplayBuffer(observationDimensions: 1, actionDimensions: 1,
-                                            size: 64 * 1024, batchSize: env.AgentCount);
+                                            size: 64 * 1024, batchSize: 1);
 
         ActorCritic ActorCriticFactory() {
             // LeakyRELU does not work o-O
@@ -32,7 +31,7 @@ public class ActorCriticTrainingTest {
             const int backInner = 16;
 
 
-            var backbone = Sequential(("bb_h1", Linear(env.ObservationSize, backInner)),
+            var backbone = Sequential(("bb_h1", Linear(1, backInner)),
                                       ("bb_h1_act", activation()),
                                       ("bb_h2", Linear(backInner, backInner)),
                                       ("bb_h2_act", activation()),
@@ -43,9 +42,9 @@ public class ActorCriticTrainingTest {
                 backbone: backbone,
                 action: Linear(backInner, 1),
                 actionDistribution: Linear(backInner, 1),
-                actionMin: env.ActionMin, actionMax: env.ActionMax);
+                actionMin: env.ActionSpace.Low, actionMax: env.ActionSpace.High);
 
-            int qInputSize = env.ObservationSize + env.ActionSize;
+            int qInputSize = 1 + 1;
             const int qInner = 16;
             Module Q() => Sequential(
                     //("q1_back", backbone),
@@ -66,7 +65,7 @@ public class ActorCriticTrainingTest {
             qOptimizerFactory: @params => Adam(@params),
             piOptimizerFactory: @params => Adam(@params));
 
-        const int totalSteps = 8 * 1024;
+        const int totalSteps = 32 * 1024;
         const int randomSteps = 128;
 
         const int updateAfter = randomSteps;
@@ -74,38 +73,35 @@ public class ActorCriticTrainingTest {
 
         float aiAction = 0;
 
-        var stepResult = env.GetStepResult(null);
+        float observation = env.Reset();
+        float totalReward = 0;
 
-        float[] observation = stepResult.Observation;
-        float avgReward = 0;
+        var random = new Random();
 
         for (int stepN = 0; stepN < totalSteps; stepN++) {
             using var _ = torch.NewDisposeScope();
-            float[] action = stepN > randomSteps
-                ? trainer.ActorCritic.Act(observation, deterministic: stepN % 28 == 0).ToArray()
-                : env.SampleAction();
-            aiAction += action.Sum();
+            float action = stepN > randomSteps
+                ? trainer.ActorCritic.Act(new []{observation}, deterministic: stepN % 28 == 0)[0]
+                : (float)random.NextDouble();
+            aiAction += MathF.Abs(action);
 
-            env.SetActions(null, action);
-            env.Step();
+            var stepResult = env.Step(action);
 
-            stepResult = env.GetStepResult(null);
-
-            float[] newObservation = stepResult.Observation;
-            float[] reward = stepResult.Reward;
-            avgReward += reward.Average();
+            float newObservation = stepResult.Observation;
+            float reward = stepResult.Reward;
+            totalReward += reward;
 
             var recording = new ReplayBufferEntry(
                 observation: tensor(observation),
                 newObservation: torch.tensor(newObservation),
                 action: torch.tensor(action),
                 reward: torch.tensor(reward),
-                done: torch.zeros(env.AgentCount)
+                done: torch.zeros(1)
             );
             replayBuffer.Store(recording);
             recording.Dispose();
 
-            newObservation.CopyTo(observation, 0);
+            observation = newObservation;
 
             if (stepN >= updateAfter && stepN % updateEvery == updateEvery - 1) {
                 const int trainBatches = 128;
@@ -121,18 +117,16 @@ public class ActorCriticTrainingTest {
                     LossQ = trainResults.Select(r => r.LossQ).Average(),
                     LossPi = trainResults.Select(r => r.LossPi).Average(),
                 });
-                Trace.WriteLine($"avg. reward: {avgReward / updateEvery}");
-                avgReward = 0;
+                Trace.WriteLine($"avg. reward: {totalReward / updateEvery}");
+                totalReward = 0;
 
                 aiAction = 0;
-                env.Reset();
-                stepResult = env.GetStepResult(null);
-                observation = stepResult.Observation;
+                observation = env.Reset();
             }
         }
 
-        float[] actionValidation = trainer.ActorCritic.Act(stepResult.Observation, deterministic: true).ToArray();
-        float avgDiff = stepResult.Observation.Zip(actionValidation, (o, a) => MathF.Abs(o - a)).Average();
+        float actionValidation = trainer.ActorCritic.Act(new []{observation}, deterministic: true)[0];
+        float avgDiff = MathF.Abs(observation - actionValidation);
         Assert.True(avgDiff < 0.1);
     }
 }

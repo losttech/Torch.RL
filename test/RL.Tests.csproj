@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\RL.csproj" />
+    <ProjectReference Include="..\src\Torch.RL.csproj" />
   </ItemGroup>
 
 </Project>
