@@ -43,12 +43,12 @@ public class ActorCritic : Module {
 
     public override Tensor forward(Tensor t) => throw new NotSupportedException();
 
-    public TensorAccessor<float> Act(float[] observation, bool deterministic = false) {
+    public TensorAccessor<float> Act(IList<float> observation, bool deterministic = false) {
         if (observation is null) throw new ArgumentNullException(nameof(observation));
 
         using var noGrad = torch.no_grad();
         var observationTensor = torch.tensor(observation,
-                                             dimensions: new[] { observation.Length, 1L });
+                                             dimensions: new[] { 1L, observation.Count });
         if (this.Actor.Device is { } device)
             observationTensor = observationTensor.to(device);
         var action = this.Actor.forward(observationTensor,

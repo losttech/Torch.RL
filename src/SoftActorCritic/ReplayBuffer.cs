@@ -70,11 +70,11 @@ public class ReplayBuffer {
             this.ptr = randint(high: this.Capacity / this.batchSize, new long[] { 1 }).ToScalar().ToInt32() * this.batchSize;
 
         foreach (int batchElement in Range(0, this.batchSize)) {
-            this.buffer.Observation[this.ptr + batchElement] = observation.Observation[batchElement];
-            this.buffer.NewObservation[this.ptr + batchElement] = observation.NewObservation[batchElement];
-            this.buffer.Action[this.ptr + batchElement] = observation.Action[batchElement];
-            this.buffer.Reward[this.ptr + batchElement] = observation.Reward[batchElement];
-            this.buffer.Done[this.ptr + batchElement] = observation.Done[batchElement];
+            this.buffer.Observation[this.ptr + batchElement].copy_(observation.Observation[batchElement]);
+            this.buffer.NewObservation[this.ptr + batchElement].copy_(observation.NewObservation[batchElement]);
+            this.buffer.Action[this.ptr + batchElement].copy_(observation.Action[batchElement]);
+            this.buffer.Reward[this.ptr + batchElement].copy_(observation.Reward[batchElement]);
+            this.buffer.Done[this.ptr + batchElement].copy_(observation.Done[batchElement]);
         }
         this.ptr = (this.ptr + this.batchSize) % this.Capacity;
         this.Size = Math.Min(this.Size + this.batchSize, this.Capacity);

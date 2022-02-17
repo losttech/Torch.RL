@@ -18,6 +18,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Torch.RL", "src\Torch.RL.cs
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RL.Tests", "test\RL.Tests.csproj", "{241AC79D-0399-4B2A-9C01-07C609F74B69}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{27A3CECE-4D00-4EE4-9A9D-93FF7895644B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PyGym.RL", "samples\PyGym.RL\PyGym.RL.csproj", "{54C85D81-2284-439E-8E32-1243A03377F1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,9 +56,24 @@ Global
 		{241AC79D-0399-4B2A-9C01-07C609F74B69}.Release|x64.Build.0 = Release|Any CPU
 		{241AC79D-0399-4B2A-9C01-07C609F74B69}.Release|x86.ActiveCfg = Release|Any CPU
 		{241AC79D-0399-4B2A-9C01-07C609F74B69}.Release|x86.Build.0 = Release|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Debug|x64.Build.0 = Debug|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Debug|x86.Build.0 = Debug|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Release|x64.ActiveCfg = Release|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Release|x64.Build.0 = Release|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Release|x86.ActiveCfg = Release|Any CPU
+		{54C85D81-2284-439E-8E32-1243A03377F1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{54C85D81-2284-439E-8E32-1243A03377F1} = {27A3CECE-4D00-4EE4-9A9D-93FF7895644B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4D804A23-81D4-4FE4-9ADE-1110371610D4}
