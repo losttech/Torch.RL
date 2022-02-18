@@ -65,7 +65,7 @@ public class ActorCriticTrainingTest {
             qOptimizerFactory: @params => Adam(@params),
             piOptimizerFactory: @params => Adam(@params));
 
-        const int totalSteps = 32 * 1024;
+        const int totalSteps = 64 * 1024;
         const int randomSteps = 128;
 
         const int updateAfter = randomSteps;
@@ -92,10 +92,10 @@ public class ActorCriticTrainingTest {
             totalReward += reward;
 
             var recording = new ReplayBufferEntry(
-                observation: tensor(observation),
-                newObservation: torch.tensor(newObservation),
-                action: torch.tensor(action),
-                reward: torch.tensor(reward),
+                observation: unsqueeze(tensor(observation), 0),
+                newObservation: unsqueeze(tensor(newObservation), 0),
+                action: unsqueeze(tensor(action), 0),
+                reward: unsqueeze(tensor(reward), 0),
                 done: torch.zeros(1)
             );
             replayBuffer.Store(recording);
